@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import json
+import socket
+import time
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class SendResult:
+    ok: bool
+    detail: str
+
+
+class SocketChatClient:
+    def __init__(self, timeout: float = 4.0):
+        self.timeout = timeout
+        self.socket: socket.socket | None = None
+        self.username: str | None = None
+        self.server: tuple[str, int] | None = None
+
+    def connect(self, host: str, port: int, username: str) -> SendResult:
+        self.close()
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(self.timeout)
+            self.socket.connect((host, port))
+            self.server = (host, port)
+            self.username = username
+            payload = {
+                "type": "login",
+                "sender": username,
+                "content": f"{username} has joined the chat",
+                "timestamp": time.time(),
+            }
+            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            return SendResult(True, f"Connected to {host}:{port} as {username}")
+        except Exception as exc:
+            self.close()
+            return SendResult(False, f"Connection failed: {exc}")
+
+    def send_chat(self, content: str) -> SendResult:
+        if self.socket is None or self.server is None or self.username is None:
+            return SendResult(False, "Not connected")
+
+        try:
+            payload = {
+                "type": "chat",
+                "sender": self.username,
+                "content": content,
+                "timestamp": time.time(),
+            }
+            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            return SendResult(True, "Message sent")
+        except Exception as exc:
+            self.close()
+            return SendResult(False, f"Send failed: {exc}")
+
+    def logout(self) -> SendResult:
+        if self.socket is None or self.username is None:
+            self.close()
+            return SendResult(True, "Already disconnected")
+
+        try:
+            payload = {
+                "type": "logout",
+                "sender": self.username,
+                "content": f"{self.username} has left the chat",
+                "timestamp": time.time(),
+            }
+            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            self.close()
+            return SendResult(True, "Disconnected")
+        except Exception as exc:
+            self.close()
+            return SendResult(False, f"Logout failed: {exc}")
+
+    def close(self) -> None:
+        if self.socket is not None:
+            try:
+                self.socket.close()
+            except Exception:
+                pass
+        self.socket = None
+        self.server = None
+        self.username = None
