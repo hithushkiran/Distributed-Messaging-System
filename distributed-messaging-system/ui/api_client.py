@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -32,6 +32,19 @@ class MessageRecord:
             return "Unknown time"
 
 
+@dataclass(frozen=True)
+class StorageSnapshot:
+    http_port: int
+    reachable: bool
+    messages: list[MessageRecord]
+    raw_payload: dict[str, Any] | None = None
+    error: str = ""
+
+    @property
+    def count(self) -> int:
+        return len(self.messages)
+
+
 class ClusterApiClient:
     def __init__(self, timeout: float = 2.5):
         self.timeout = timeout
@@ -54,6 +67,9 @@ class ClusterApiClient:
             return None
 
     def get_messages(self, http_port: int) -> list[MessageRecord]:
+        return self.get_storage_snapshot(http_port).messages
+
+    def get_storage_snapshot(self, http_port: int) -> StorageSnapshot:
         url = f"http://127.0.0.1:{http_port}/messages"
         try:
             response = requests.get(url, timeout=self.timeout)
@@ -70,9 +86,23 @@ class ClusterApiClient:
                     )
                 )
             records.sort(key=lambda record: record.timestamp)
-            return records
-        except Exception:
-            return []
+            return StorageSnapshot(
+                http_port=http_port,
+                reachable=True,
+                messages=records,
+                raw_payload=payload,
+            )
+        except Exception as exc:
+            return StorageSnapshot(
+                http_port=http_port,
+                reachable=False,
+                messages=[],
+                raw_payload=None,
+                error=str(exc),
+            )
+
+    def get_storage_snapshots(self, http_ports: list[int]) -> dict[int, StorageSnapshot]:
+        return {port: self.get_storage_snapshot(port) for port in http_ports}
 
     def get_cluster_snapshot(self, http_ports: list[int]) -> list[NodeStatus]:
         statuses: list[NodeStatus] = []

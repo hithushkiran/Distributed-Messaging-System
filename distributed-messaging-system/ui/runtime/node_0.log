@@ -31032,3 +31032,47 @@ Arguments: ()
 [32m>>> 09:25:50 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 recognized leader: 127.0.0.1:5002[0m
 [32m>>> 09:25:51 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 recognized leader: 127.0.0.1:5001[0m
 [32m>>> 09:25:51 [Consensus      ] INFO     Leader changed to: 127.0.0.1:5001[0m
+======================================================================
+DEMO MODE: Showing only important events (full logs in full_system.log)
+======================================================================
+
+[37m10:50:20 [Consensus      ] INFO     Consensus manager initialized with 3 nodes[0m
+[32m>>> 10:50:20 [Failover       ] INFO     Failover handler initialized with 3 nodes[0m
+[37m10:50:20 [ClusterServer  ] INFO     Initialized server node 0 at 127.0.0.1:5000[0m
+[37m10:50:20 [ClusterServer  ] INFO     Starting to accept client connections[0m
+[37m10:50:20 [Consensus      ] INFO     Starting Raft consensus for node 127.0.0.1:5000[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 initialized (RPC port: 6000)[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 started as FOLLOWER (term 0)[0m
+[37m10:50:20 [MessageStorage ] INFO     MessageStorage initialized with Raft consensus replication[0m
+[37m10:50:20 [MessageStorage ] INFO     Storage linked to Raft node: 127.0.0.1:5000[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] State machine callback configured for node 127.0.0.1:5000[0m
+[37m10:50:20 [Failover       ] INFO     Starting cluster monitoring[0m
+[32m>>> 10:50:20 [Failover       ] INFO     Failover monitoring started[0m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 45: character maps to <undefined>
+Call stack:
+  File "C:\Users\User\Desktop\DS Messaging\Distributed-Messaging-System\distributed-messaging-system\src\server_cluster.py", line 391, in <module>
+    server.run_server()
+  File "C:\Users\User\Desktop\DS Messaging\Distributed-Messaging-System\distributed-messaging-system\src\server_cluster.py", line 324, in run_server
+    self.start()
+  File "C:\Users\User\Desktop\DS Messaging\Distributed-Messaging-System\distributed-messaging-system\src\server_cluster.py", line 317, in start
+    logger.info(f"\u2705 Raft log replication enabled for distributed message storage")
+Message: '\u2705 Raft log replication enabled for distributed message storage'
+Arguments: ()
+[32m>>> 10:50:20 [MessageStorage ] WARNING  Cannot store message - not leader[0m
+[37m10:50:20 [ClusterServer  ] INFO     Welcome message stored in distributed storage[0m
+[33m10:50:20 [ClusterServer  ] WARNING  Could not verify message storage[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 updating term 0 -> 1[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 became FOLLOWER (term 1)[0m
+[37m10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 granted vote to 127.0.0.1:5001 (term 1)[0m
+[32m>>> 10:50:20 [RaftNode       ] INFO     [RAFT] Node 127.0.0.1:5000 recognized leader: 127.0.0.1:5001[0m
+[32m>>> 10:50:21 [Consensus      ] INFO     Leader changed to: 127.0.0.1:5001[0m
+[32m>>> 10:50:23 [Failover       ] INFO     Initial leader is 127.0.0.1:5001[0m
+[37m10:50:48 [RaftNode       ] INFO     [RAFT] Follower updated commit_index: 0 -> 1[0m
