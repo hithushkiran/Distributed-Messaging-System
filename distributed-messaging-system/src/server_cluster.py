@@ -321,7 +321,9 @@ class ClusterServer:
         """Run the server, including all components"""
         try:
             # Start the server
-            self.start()
+            if not self.start():
+                logger.error("Server startup failed; exiting instead of leaving a partial node process running")
+                return
             
             # Run initialization tasks
             self.loop.run_until_complete(self.store_welcome_message())

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -46,7 +47,7 @@ class StorageSnapshot:
 
 
 class ClusterApiClient:
-    def __init__(self, timeout: float = 2.5):
+    def __init__(self, timeout: float = 0.75):
         self.timeout = timeout
 
     def get_status(self, http_port: int) -> NodeStatus | None:
@@ -102,15 +103,44 @@ class ClusterApiClient:
             )
 
     def get_storage_snapshots(self, http_ports: list[int]) -> dict[int, StorageSnapshot]:
-        return {port: self.get_storage_snapshot(port) for port in http_ports}
+        if not http_ports:
+            return {}
+
+        snapshots: dict[int, StorageSnapshot] = {}
+        with ThreadPoolExecutor(max_workers=len(http_ports)) as executor:
+            futures = {executor.submit(self.get_storage_snapshot, port): port for port in http_ports}
+            for future in as_completed(futures):
+                port = futures[future]
+                try:
+                    snapshots[port] = future.result()
+                except Exception as exc:
+                    snapshots[port] = StorageSnapshot(
+                        http_port=port,
+                        reachable=False,
+                        messages=[],
+                        raw_payload=None,
+                        error=str(exc),
+                    )
+
+        return {port: snapshots[port] for port in http_ports}
 
     def get_cluster_snapshot(self, http_ports: list[int]) -> list[NodeStatus]:
-        statuses: list[NodeStatus] = []
-        for port in http_ports:
-            status = self.get_status(port)
-            if status is not None:
-                statuses.append(status)
-        return statuses
+        if not http_ports:
+            return []
+
+        statuses_by_port: dict[int, NodeStatus] = {}
+        with ThreadPoolExecutor(max_workers=len(http_ports)) as executor:
+            futures = {executor.submit(self.get_status, port): port for port in http_ports}
+            for future in as_completed(futures):
+                port = futures[future]
+                try:
+                    status = future.result()
+                except Exception:
+                    status = None
+                if status is not None:
+                    statuses_by_port[port] = status
+
+        return [statuses_by_port[port] for port in http_ports if port in statuses_by_port]
 
     def discover_leader(self, http_ports: list[int]) -> tuple[int | None, NodeStatus | None]:
         for port in http_ports:

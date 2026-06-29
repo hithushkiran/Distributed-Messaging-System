@@ -141,7 +141,7 @@ def setup_demo_logging(verbose=False):
     root.addHandler(console_handler)
     
     # Optional: Create a separate file for full logs
-    file_handler = logging.FileHandler('full_system.log', mode='a')
+    file_handler = logging.FileHandler('full_system.log', mode='a', encoding='utf-8')
     file_formatter = logging.Formatter(
         fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'

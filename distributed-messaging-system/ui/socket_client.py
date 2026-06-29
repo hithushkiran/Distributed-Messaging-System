@@ -13,11 +13,35 @@ class SendResult:
 
 
 class SocketChatClient:
-    def __init__(self, timeout: float = 4.0):
+    protocol_version = 2
+
+    def __init__(self, timeout: float = 1.5):
         self.timeout = timeout
+        self.protocol_version = self.__class__.protocol_version
         self.socket: socket.socket | None = None
         self.username: str | None = None
         self.server: tuple[str, int] | None = None
+
+    def _send_payload(self, payload: dict) -> None:
+        self.socket.sendall(json.dumps(payload).encode("utf-8"))
+
+    def _wait_for_login_ack(self) -> bool:
+        if self.socket is None:
+            return False
+
+        previous_timeout = self.socket.gettimeout()
+        try:
+            self.socket.settimeout(self.timeout)
+            data = self.socket.recv(4096)
+            return bool(data)
+        except socket.timeout:
+            return False
+        except Exception:
+            self.close()
+            return False
+        finally:
+            if self.socket is not None:
+                self.socket.settimeout(previous_timeout)
 
     def connect(self, host: str, port: int, username: str) -> SendResult:
         self.close()
@@ -33,7 +57,10 @@ class SocketChatClient:
                 "content": f"{username} has joined the chat",
                 "timestamp": time.time(),
             }
-            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            self._send_payload(payload)
+            if not self._wait_for_login_ack():
+                self.close()
+                return SendResult(False, "Login was not acknowledged by the server")
             return SendResult(True, f"Connected to {host}:{port} as {username}")
         except Exception as exc:
             self.close()
@@ -50,7 +77,7 @@ class SocketChatClient:
                 "content": content,
                 "timestamp": time.time(),
             }
-            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            self._send_payload(payload)
             return SendResult(True, "Message sent")
         except Exception as exc:
             self.close()
@@ -68,7 +95,7 @@ class SocketChatClient:
                 "content": f"{self.username} has left the chat",
                 "timestamp": time.time(),
             }
-            self.socket.sendall(json.dumps(payload).encode("utf-8"))
+            self._send_payload(payload)
             self.close()
             return SendResult(True, "Disconnected")
         except Exception as exc:
